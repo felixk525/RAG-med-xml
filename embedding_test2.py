@@ -9,7 +9,8 @@ import random
 from datasets import load_dataset
 from transformers import set_seed
 from sentence_transformers import SentenceTransformer
-
+# This file is to test the embedding model with actual XML documents from a dataset. Can the embedding model find the correct
+# chunks that belong to the question ?
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 torch.use_deterministic_algorithms(True)
 torch.manual_seed(42)
