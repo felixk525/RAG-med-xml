@@ -5,25 +5,22 @@ from sentence_transformers import losses, SentenceTransformer, InputExample
 import json
 import random
 
+# Used to create the embedding model training dataset
+
 # model = 'paraphrase-multilingual'
 chunk_size = 50  # Number of rows to process at a time
 train_data_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl"
 output_file_path = "D:/Bachelorarbeit/embedding_training_dataset.jsonl"
-# train_data_path = "D:/Bachelorarbeit/XML_testing_dataset.jsonl"
-# output_file_path = "D:/Bachelorarbeit/embedding_testing_dataset.jsonl"
-# unseen_file_path = "D:/Bachelorarbeit/embedding_testing_unseen_dataset.jsonl"
 malformed = 0
 malformed2 = 0
 total_pairs_written = 0
 lines_processed = 0
 positive_negative_pairs = []
 unseen_pair, cdata_pair, normal_pair = 0, 0, 0
-# debug = 0
+
 with open(output_file_path, "w", encoding="utf-8") as f:
     pass
 
-# with open(unseen_file_path, "w", encoding="utf-8") as f:
-#     pass
 
 def chunk_text(text, lines_per_chunk=5):
     lines = text.splitlines()
@@ -50,8 +47,7 @@ def read_jsonl_in_chunks(file, chunk_size):
         yield current_chunk
 
 # Example usage
-with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
-     #open(unseen_file_path, 'a', encoding='utf-8') as unseen_file:
+with open(output_file_path, 'a', encoding='utf-8') as output_file:
     with open(train_data_path, 'r', encoding='utf-8') as file:
         for chunk in read_jsonl_in_chunks(file, chunk_size):
             for entry in chunk:
@@ -86,7 +82,7 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                             if str(index).isdigit():
                                 if int(index) < len(chunks_xml):
 
-                                    actions = ["Cdata_negative", "Normal"]
+                                    actions = ["Cdata_negative", "Normal"] # Sample 50/50 between CDATA and completely random
                                     probabilities = [0.5, 0.5]
                                     chosen_action = random.choices(actions, probabilities)[0]
                                     if chosen_action == actions[1]:
@@ -115,16 +111,14 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                     if positive_examples:
                         for pos_example, neg_example in zip(positive_examples, negative_examples):
                             if unseen_bool == False:
-                                pair = { # unseen bool handling
+                                pair = {
                                             "question": question,
                                             "positive_example": pos_example,
                                             "negative_example": neg_example
                                         }
                                 output_file.write(json.dumps(pair, ensure_ascii=False) + "\n")
                                 total_pairs_written += 1
-                        # else:
-                        #     unseen_file.write(json.dumps(pair, ensure_ascii=False) + "\n")
-                        #     unseen_pair +=1
+
 print(f"Malformed entries without sufficient details: {malformed}")
 print(f"Malformed entries with insufficient negative chunks: {malformed2}")
 print(f"Total valid positive-negative pairs written: {total_pairs_written}")
@@ -132,21 +126,4 @@ print(f"Total valid unseen pairs written: {unseen_pair}")
 print(f"Total JSON lines processed: {lines_processed}")
 print(f"Total valid CDATA pairs written: {cdata_pair}")
 print(f"Total valid normal pairs written: {normal_pair}")
-# Malformed entries without sufficient details: 0
-# Malformed entries with insufficient negative chunks: 0
-# Total valid positive-negative pairs written: 2037831
-# Total valid unseen pairs written: 0 -> training dataset- no unseen samples
-# Total JSON lines processed: 189183
-# Total valid CDATA pairs written: 1018928
-# Total valid normal pairs written: 1018903
-
-#Testing data
-#742674 pairs (with unseen pairs)
-# 60307 unseen pairs in seperate data
-#all from 63161 JSON lines
-
-# Run
-
-# add normal text ? about 20 %
-# more negatives with CDATA - about 40 %
-# usual data about 40 %
+# Control outputs
