@@ -13,8 +13,8 @@ import json
 link = "https://en.wikipedia.org/wiki/" # Wikipedias usual prefix url
 robot_url = "https://en.wikipedia.org/robots.txt" # Wikipedias crawling guidelines
 # Path to the dataset
-path = "D:/Bachelorarbeit/WikiQA/train.csv"
-output_file = "D:/Bachelorarbeit/WikiQA/crawled_data.jsonl"
+path = "D:/Bachelorarbeit/WikiQA/train.csv" # The WikiQA file
+output_file = "D:/Bachelorarbeit/WikiQA/crawled_data.jsonl" # The benchmark created
 def main():
     with open(output_file, "w", encoding="utf-8") as f:
         pass
@@ -109,6 +109,8 @@ def crawl_links(data, output_file, checker):
 
 if __name__ == "__main__":
     main()
+
+# Results should be something like:
 # Crawled 120 of 873 links.
 # Failed to fetch data. Status code: 404. Entry was https://en.wikipedia.org/wiki/EstÃ©e_Lauder_Companies
 # Crawled 140 of 873 links.
