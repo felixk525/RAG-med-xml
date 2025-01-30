@@ -5,14 +5,12 @@ from sentence_transformers import losses, SentenceTransformer, InputExample
 import json
 import random
 
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-1.5B-Instruct")
+# Code for the full pipeline test dataset. Mostly directly uses the initial dataset
 
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-1.5B-Instruct")
 chunk_size = 50  # Number of rows to process at a time
-train_data_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl"
-output_file_path = "D:/Bachelorarbeit/overall_testing_dataset.jsonl"
-# train_data_path = "D:/Bachelorarbeit/XML_testing_dataset.jsonl"
-# output_file_path = "D:/Bachelorarbeit/generation_testing_dataset.jsonl"
-# unseen_file_path = "D:/Bachelorarbeit/generation_testing_unseen_dataset.jsonl"
+train_data_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl" # Initial dataset
+output_file_path = "D:/Bachelorarbeit/overall_testing_dataset.jsonl" # Dataset to create
 malformed = 0
 malformed2 = 0
 total_pairs_written = 0
@@ -24,11 +22,10 @@ normal_pair = 0
 cdata_pair = 0
 empty_catch = 0
 chunks_processed = 0
+# Tracking variables
 with open(output_file_path, "w", encoding="utf-8") as f:
     pass
-
-# with open(unseen_file_path, "w", encoding="utf-8") as f:
-#     pass
+# Overwrite existing files
 
 def chunk_text(text, lines_per_chunk=5):
     lines = text.splitlines()
@@ -53,9 +50,8 @@ def cdata_chunks(chunks, indices_list):
     else:
         return None
 
-# Example usage
-with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
-     #open(unseen_file_path, 'a', encoding='utf-8') as unseen_file:
+
+with open(output_file_path, 'a', encoding='utf-8') as output_file:
     with open(train_data_path, 'r', encoding='utf-8') as file:
         for chunk in read_jsonl_in_chunks(file, chunk_size):
             if chunks_processed > 100:
@@ -71,7 +67,6 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
 
                 # Process each question-chunk pair dynamically
                 for question, details in qaci_pairs.items():
-                    # unseen_bool = False
                     if not details or len(details) < 2:
                         malformed += 1
                         continue
@@ -93,15 +88,6 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                             empty_bool = True
                             empty_catch += 1
                             continue
-                        #if len(chunk_indices) <= 4: # 4 because section ID is included
-
-                                    
-                            # else:
-                            #     if any(excluded_section in index for excluded_section in ["Vormedikation", "Therapie"]):
-                            #         unseen_bool = True
-                            #     else:
-                            #         unseen_bool = False
-                    # Store the question, positive, and negative examples
 
                     pair = {
                                 "output": f'{chunk_answer}\n',
@@ -112,27 +98,11 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                             }
                     output_file.write(json.dumps(pair, ensure_ascii=False) + "\n")
                     total_pairs_written += 1
-                        # if unseen_bool == True:
-                        #     unseen_file.write(json.dumps(pair, ensure_ascii=False) + "\n")
-                        #     unseen_pair +=1
-                        # else:
-                        #     seen_pair +=1
+
 print(f"Malformed entries without sufficient details: {malformed}")
 print(f"Malformed entries with insufficient negative chunks: {malformed2}")
-print(f"Total valid positive-negative pairs written: {total_pairs_written}")#, seen {seen_pair}")
-# print(f"Total valid unseen pairs written: {unseen_pair}")
-print(f"Total JSON lines processed: {lines_processed}")
+print(f"Total valid positive-negative pairs written: {total_pairs_written}")
 print(f"Negative cases: {negative_pair}")
 print(f"Cdata cases: {cdata_pair}")
 print(f"Normal (random) cases: {normal_pair}")
 print(f"Amount of empty Cdata cases: {empty_catch}")
-
-# generation dataset
-# Malformed entries without sufficient details: 160662
-# Malformed entries with insufficient negative chunks: 139
-# Total valid positive-negative pairs written: 864503
-# Total JSON lines processed: 189183
-# Negative cases: 102522
-# Cdata cases: 600643
-# Normal (random) cases: 299106
-# Amount of empty Cdata cases: 30215
