@@ -5,10 +5,10 @@ from sentence_transformers import losses, SentenceTransformer, InputExample
 import json
 import random
 
+# File used for embedding test dataset creation from the initial test dataset
+
 # model = 'paraphrase-multilingual'
 chunk_size = 50  # Number of rows to process at a time
-# train_data_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl"
-# output_file_path = "D:/Bachelorarbeit/embedding_training_dataset.jsonl"
 train_data_path = "D:/Bachelorarbeit/XML_testing_dataset.jsonl"
 output_file_path = "D:/Bachelorarbeit/embedding_testing_dataset.jsonl"
 unseen_file_path = "D:/Bachelorarbeit/embedding_testing_unseen_dataset.jsonl"
@@ -19,12 +19,13 @@ lines_processed = 0
 positive_negative_pairs = []
 unseen_pair, cdata_pair, normal_pair = 0, 0, 0
 total_seen = 0
-# debug = 0
+
 with open(output_file_path, "w", encoding="utf-8") as f:
     pass
 
 with open(unseen_file_path, "w", encoding="utf-8") as f:
     pass
+# Empties the files if they already exist
 
 def chunk_text(text, lines_per_chunk=5):
     lines = text.splitlines()
@@ -58,7 +59,7 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
             for entry in chunk:
                 lines_processed += 1
                 if lines_processed % 1000 == 0:
-                    print(f"Processed {lines_processed} JSON lines.")
+                    print(f"Processed {lines_processed} JSON lines.") # To track process
                 xml_data = entry.get("xml_data")
                 qaci_pairs = entry.get("qaci_pairs", {})
                 chunks_xml = chunk_text(xml_data, lines_per_chunk=5)
@@ -137,13 +138,9 @@ print(f"Total JSON lines processed: {lines_processed}")
 print(f"Total valid CDATA pairs written: {cdata_pair}")
 print(f"Total valid normal pairs written: {normal_pair}")
 print(f"Total valid seen pairs written: {total_seen}")
-# Total valid positive-negative pairs written: 2037834
-# Total valid unseen pairs written: 0
-# Total JSON lines processed: 189183
-# Total valid CDATA pairs written: 1018228
-# Total valid normal pairs written: 1019606
 
-#Testing data
+
+# Example output
 # Total valid positive-negative pairs written: 742674
 # Total valid unseen pairs written: 60307
 # Total JSON lines processed: 63161
