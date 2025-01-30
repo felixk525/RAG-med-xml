@@ -5,14 +5,13 @@ from sentence_transformers import losses, SentenceTransformer, InputExample
 import json
 import random
 
+# Code used to create the generation training dataset
+
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-1.5B-Instruct")
 
 chunk_size = 50  # Number of rows to process at a time
-train_data_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl"
-output_file_path = "D:/Bachelorarbeit/generation_training_dataset.jsonl"
-# train_data_path = "D:/Bachelorarbeit/XML_testing_dataset.jsonl"
-# output_file_path = "D:/Bachelorarbeit/generation_testing_dataset.jsonl"
-# unseen_file_path = "D:/Bachelorarbeit/generation_testing_unseen_dataset.jsonl"
+train_data_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl" # The initial dataset
+output_file_path = "D:/Bachelorarbeit/generation_training_dataset.jsonl" # The finalized training dataset
 malformed = 0
 malformed2 = 0
 total_pairs_written = 0
@@ -23,11 +22,10 @@ negative_pair = 0
 normal_pair = 0
 cdata_pair = 0
 empty_catch = 0
+# Variables for tracking
 with open(output_file_path, "w", encoding="utf-8") as f:
     pass
-
-# with open(unseen_file_path, "w", encoding="utf-8") as f:
-#     pass
+# Overwrite existing files
 
 def chunk_text(text, lines_per_chunk=5):
     lines = text.splitlines()
@@ -52,9 +50,8 @@ def cdata_chunks(chunks, indices_list):
     else:
         return None
 
-# Example usage
-with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
-     #open(unseen_file_path, 'a', encoding='utf-8') as unseen_file:
+
+with open(output_file_path, 'a', encoding='utf-8') as output_file:
     with open(train_data_path, 'r', encoding='utf-8') as file:
         for chunk in read_jsonl_in_chunks(file, chunk_size):
             for entry in chunk:
@@ -67,7 +64,6 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
 
                 # Process each question-chunk pair dynamically
                 for question, details in qaci_pairs.items():
-                    # unseen_bool = False
                     if not details or len(details) < 2:
                         malformed += 1
                         continue
@@ -91,12 +87,12 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                             continue
                         if len(chunk_indices) <= 4: # 4 because section ID is included
                             actions = ["cdata_fill", "normal", "irrelevant"]
-                            probabilities = [0.6, 0.3, 0.1]
+                            probabilities = [0.6, 0.3, 0.1] # Sample the various data groups
                             chosen_action = random.choices(actions, probabilities)[0]
                             
                             if chosen_action == actions[2] or empty_bool:
                                 negative_pair += 1
-                                chunk_answer = "Leider konnte ich keine relevanten Informationen finden"
+                                chunk_answer = "Leider konnte ich keine relevanten Informationen finden" # Answer for no relevant content
                                 while counter < 3:
                                     content.append(chunks_xml[random.choice(negative_indices)])
                                     counter += 1
@@ -105,7 +101,7 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                                     if str(index).isdigit():
                                         if int(index) < len(chunks_xml):
                                             counter += 1
-                                            content.append(chunks_xml[index]) # positive
+                                            content.append(chunks_xml[index])
                                 if counter < 3:
                                     if chosen_action == actions[1]:
                                         normal_pair += 1
@@ -125,16 +121,8 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                                                 malformed2 += 1
                                             counter += 1
 
-                                    
-                            # else:
-                            #     if any(excluded_section in index for excluded_section in ["Vormedikation", "Therapie"]):
-                            #         unseen_bool = True
-                            #     else:
-                            #         unseen_bool = False
                     # Store the question, positive, and negative examples
                     if len(content) == 3:
-                        #for example in content:#zip(positive_examples, negative_examples):
-# add stip handling to evade empty cdata
                         context = (
                             f'Kontext 1: "{content[0]}"\n'
                             f'Kontext 2: "{content[1]}"\n'
@@ -149,7 +137,7 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                             f'-----\n'
                             f'Antwort: '
                         )
-                        tokenized = tokenizer(prompt, return_tensors="pt")  # `return_tensors` is optional if you just want token count
+                        tokenized = tokenizer(prompt, return_tensors="pt")  # Simulate final examples so it wont be truncated during fine-tuning
                         num_tokens = len(tokenized.input_ids[0])
                         if num_tokens < 2048:
 
@@ -165,22 +153,17 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file:#, \
                             total_pairs_written += 1
                         else:
                             malformed += 1
-                        # if unseen_bool == True:
-                        #     unseen_file.write(json.dumps(pair, ensure_ascii=False) + "\n")
-                        #     unseen_pair +=1
-                        # else:
-                        #     seen_pair +=1
+
 print(f"Malformed entries without sufficient details: {malformed}")
 print(f"Malformed entries with insufficient negative chunks: {malformed2}")
-print(f"Total valid positive-negative pairs written: {total_pairs_written}")#, seen {seen_pair}")
-# print(f"Total valid unseen pairs written: {unseen_pair}")
+print(f"Total valid positive-negative pairs written: {total_pairs_written}")
 print(f"Total JSON lines processed: {lines_processed}")
 print(f"Negative cases: {negative_pair}")
 print(f"Cdata cases: {cdata_pair}")
 print(f"Normal (random) cases: {normal_pair}")
 print(f"Amount of empty Cdata cases: {empty_catch}")
 
-# generation dataset
+# Example output
 # Malformed entries without sufficient details: 160662
 # Malformed entries with insufficient negative chunks: 139
 # Total valid positive-negative pairs written: 864503
