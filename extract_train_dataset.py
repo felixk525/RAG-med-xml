@@ -6,19 +6,16 @@ import xml.dom.minidom
 import random
 import transformers
 from transformers import AutoTokenizer
-# 1. replace tag name in attribute cases
-# 2. remove closing tags without attributes
-# 3. Capitalize opening tags and add :
-# 4. Remove excessive whitespace
+
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-1.5B-Instruct")
 file_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl"
-chunk_factor = 500 # facor * 50 = entries processed
-clength = 9
+chunk_factor = 500 # factor * 50 = entries processed
+clength = 9 # Number of chunks used for the examples. Hardcoded in prompt at the end
 entry_index = 0 
 failures2 = 0
 failures3 = 0
 output_file = 'D:/Bachelorarbeit/extract_train_test_dataset.jsonl'
-output_file_long = 'D:/Bachelorarbeit/extract_train_test_dataset_long.jsonl'
+output_file_long = 'D:/Bachelorarbeit/extract_train_test_dataset_long.jsonl' # Dataset with only entries above a certain length
 malformed = 0
 malformed2 = 0
 empty_catch = 0
@@ -27,13 +24,10 @@ cdata_pair = 0
 total_pairs_written = 0
 malformed3 = 0
 lines_processed = 0
-labor_a = 0
+labor_a = 0 # Special variables to track one of the longest categories
 labor_b = 0
 long_pairs_written = 0
-# Processing finished. Failures: 5096
-# Processing finished. Failures2: 0
-# Processing finished. Failures3: 1446
-# Processing finished. Written: 9780
+# Various control variables
 
 with open(output_file, 'w', encoding='utf-8') as file:
     pass
@@ -58,7 +52,6 @@ def xml_chunk_to_text(xml_chunk):
         if cdata:
             line = cdata.group(1)
             line = re.sub(r'<.*?>', ' ', line)
-                #line = re.sub(r'<[^<>]*>$', ' ', line)
         elif closing_tag:
             line = ""
         elif self_closing_tag:
@@ -75,7 +68,7 @@ def xml_chunk_to_text(xml_chunk):
                     line = re.sub(rf'\b{attr_name}=["\'].*?["\']', '', line).strip()
                     break
         elif opening_tag:
-            tag = opening_tag.group(1) + ": " # Capitalize
+            tag = opening_tag.group(1) + ": " 
             line = opening_tag.group(2).strip()
 
 
@@ -86,17 +79,6 @@ def xml_chunk_to_text(xml_chunk):
         if line:
             result.append(line)
     return "\n".join(result)
-
-#Entferne ""
-#Kapitalize
-# def cdata_chunks(chunks):
-#     cdata_indices = [original_idx for original_idx, chunk in chunks if "CDATA" in chunk]
-#     if cdata_indices:
-#         return cdata_indices
-#     else:
-#         return []
-# def cdata_chunks(chunks):
-#     return [chunk for chunk in chunks if "CDATA" in chunk]
 
 def cdata_chunks(chunks, indices_list):
     filtered_chunks = [(i, chunk) for i, chunk in enumerate(chunks) if i not in indices_list[1:]]
@@ -219,7 +201,7 @@ with open(output_file, 'a', encoding='utf-8') as output_file, \
                             f'-----\n'
                             f'Antwort: '
                         )
-                        tokenized = tokenizer(prompt, return_tensors="pt")  # `return_tensors` is optional if you just want token count
+                        tokenized = tokenizer(prompt, return_tensors="pt") # Tokenize full prompt so it wont get truncated during training
                         num_tokens = len(tokenized.input_ids[0])
                         if num_tokens < 2048:
 
@@ -245,7 +227,6 @@ with open(output_file, 'a', encoding='utf-8') as output_file, \
                     else:
                         malformed3 +=1
 
-#print(xml_chunk_to_text(xml_input))
 print("Processing finished. Not enough cdata: " + str(failures2))
 print("Processing finished. Too long: " + str(failures3))
 print(f"Malformed entries without sufficient details: {malformed}")
@@ -269,106 +250,3 @@ print(f"denied Labor {labor_a} accepted Labor {labor_b}")
 # Amount of empty Cdata cases: 4018
 # Lines processed: 25000
 # denied Labor 3360 accepted Labor 16148
-
-# Processing finished. Not enough cdata: 18745
-# Processing finished. Too long: 17088
-# Malformed entries without sufficient details: 0
-# Malformed entries with insufficient negative chunks: 0
-# Total valid pairs written: 138478
-# Cdata cases: 108135
-# Normal (random) cases: 46567
-# Amount of empty Cdata cases: 4018
-# Lines processed: 25000
-
-
-
-# Transform the malformed XML-like data
-# result = parse_malformed_xml(malformed_xml)
-# print(result)
-
-
-# import ollama
-# from transformers import AutoTokenizer, AutoModel
-# from torch.utils.data import DataLoader
-# from sentence_transformers import losses, SentenceTransformer, InputExample
-# import json
-# import random
-
-# # model = 'paraphrase-multilingual'
-# chunk_size = 50  # Number of rows to process at a time
-# train_data_path = "D:/Bachelorarbeit/extract_dataset.json"
-# output_file_path = "D:/Bachelorarbeit/extraction_training_dataset.jsonl"
-# malformed = 0
-# malformed2 = 0
-# total_pairs_written = 0
-# lines_processed = 0
-# positive_negative_pairs = []
-# unseen_pair, cdata_pair, normal_pair = 0, 0, 0
-# # debug = 0
-# with open(output_file_path, "w", encoding="utf-8") as f:
-#     pass
-
-# def chunk_text(text, lines_per_chunk=5):
-#     lines = text.splitlines()
-#     return ["\n".join(lines[i:i + lines_per_chunk]) for i in range(0, len(lines), lines_per_chunk)]
-
-# def cdata_chunks(chunks, indices_list):
-#     filtered_chunks = [(i, chunk) for i, chunk in enumerate(chunks) if i not in indices_list[1:]]
-#     cdata_indices = [original_idx for original_idx, chunk in filtered_chunks if "CDATA" in chunk]
-#     if cdata_indices:
-#         return random.choice(cdata_indices)
-#     else:
-#         return None
-
-
-# def read_jsonl_in_chunks(file, chunk_size):
-#     current_chunk = []
-#     for line in file:
-#         current_chunk.append(json.loads(line))  # Parse each JSONL line
-#         if len(current_chunk) == chunk_size:
-#             yield current_chunk  # Yield the full chunk
-#             current_chunk = []
-#     if current_chunk:  # Yield the last chunk if it's not empty
-#         yield current_chunk
-
-# def cdata_chunks(chunks):
-#     cdata_indices = [original_idx for original_idx, chunk in chunks if "CDATA" in chunk]
-#     if cdata_indices:
-#         return cdata_indices
-#     else:
-#         return None
-
-# with open(output_file_path, 'a', encoding='utf-8') as output_file:
-#     with open(train_data_path, 'r', encoding='utf-8') as file:
-#         for chunk in read_jsonl_in_chunks(file, chunk_size):
-#             for entry in chunk:
-#                 lines_processed += 1
-#                 if lines_processed % 1000 == 0:
-#                     print(f"Processed {lines_processed} JSON lines.")
-#                 xml_data = entry.get("xml_data")
-#                 chunks_xml = chunk_text(xml_data, lines_per_chunk=5)
-#                 xmltext_examples = []
-#                 fluent_examples = []
-#                 actions = ["Cdata_negative", "Normal"]
-#                 probabilities = [0.5, 0.5]
-#                 chosen_action = random.choices(actions, probabilities)[0]
-#                 xmltext_examples.append(chunk)
-#                 fluent_examples.append(chunk)
-#                 #if chosen_action
-#                 cdata_chunks(chunks_xml)
-#                 malformed += 1
-#                 for chunk in chunks_xml.items():
-                    
-
-#                     # Negative example: Choose a random chunk not in chunk_indices
-#                     all_indices = set(range(len(chunks_xml)))
-
-
-
-# print(f"Malformed entries without sufficient details: {malformed}")
-# print(f"Malformed entries with insufficient negative chunks: {malformed2}")
-# print(f"Total valid positive-negative pairs written: {total_pairs_written}")
-# print(f"Total valid unseen pairs written: {unseen_pair}")
-# print(f"Total JSON lines processed: {lines_processed}")
-# print(f"Total valid CDATA pairs written: {cdata_pair}")
-# print(f"Total valid normal pairs written: {normal_pair}")
