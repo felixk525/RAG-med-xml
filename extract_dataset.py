@@ -7,6 +7,8 @@ import random
 import transformers
 from transformers import AutoTokenizer
 
+# Code used to create the train and testing datasets for the extract model that transforms the XML content into fluent results
+
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-1.5B-Instruct")
 file_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl"
 chunk_factor = 500 # factor * 50 = entries processed
