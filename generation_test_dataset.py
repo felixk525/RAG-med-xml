@@ -4,10 +4,11 @@ from torch.utils.data import DataLoader
 from sentence_transformers import losses, SentenceTransformer, InputExample
 import json
 import random
+
+# Code to create the testing datasets for the generation model
+
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-1.5B-Instruct")
 chunk_size = 50  # Number of rows to process at a time
-# train_data_path = "D:/Bachelorarbeit/XML_training_dataset.jsonl"
-# output_file_path = "D:/Bachelorarbeit/generation_training_dataset.jsonl"
 train_data_path = "D:/Bachelorarbeit/XML_testing_dataset.jsonl"
 output_file_path = "D:/Bachelorarbeit/generation_testing_dataset.jsonl"
 unseen_file_path = "D:/Bachelorarbeit/generation_testing_unseen_dataset.jsonl"
@@ -23,13 +24,14 @@ real_pair = 0
 cdata_pair = 0
 normal_pair = 0
 empty_catch = 0
+# Control variables
 with open(output_file_path, "w", encoding="utf-8") as f:
     pass
-
 with open(unseen_file_path, "w", encoding="utf-8") as f:
     pass
 with open(realuse_file_path, "w", encoding="utf-8") as f:
     pass
+#Overwrite existing files
 
 def chunk_text(text, lines_per_chunk=5):
     lines = text.splitlines()
@@ -54,7 +56,6 @@ def cdata_chunks(chunks, indices_list):
     else:
         return None
 
-# Example usage
 with open(output_file_path, 'a', encoding='utf-8') as output_file, \
     open(unseen_file_path, 'a', encoding='utf-8') as unseen_file, \
     open(realuse_file_path, 'a', encoding='utf-8') as realuse_file:
@@ -86,7 +87,7 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
                     counter = 0
                     e_check = chunk_answer.strip()
                     if not e_check:
-                        empty_catch += 1
+                        empty_catch += 1 # Check that the CDATA isnt empty
                         continue
                     if negative_indices:  # Ensure there are negative examples available
                         if len(negative_indices) < len(chunk_indices):
@@ -94,13 +95,13 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
                             continue
                         if len(chunk_indices) <= 4:
                             
-                            actions = ["cdata_fill", "normal", "irrelevant"]
+                            actions = ["cdata_fill", "normal", "irrelevant"] # Set ratio
                             probabilities = [0.7, 0.2, 0.1]
                             chosen_action = random.choices(actions, probabilities)[0]
                             
                             if chosen_action == actions[2]:
                                 negative_pair += 1
-                                chunk_answer = "Leider konnte ich keine relevanten Informationen finden"
+                                chunk_answer = "Leider konnte ich keine relevanten Informationen finden" # Answer if there is no valid content
                                 while counter < 3:
                                     content.append(chunks_xml[random.choice(negative_indices)])
                                     counter += 1
@@ -115,12 +116,12 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
                                             if int(index) < len(chunks_xml): 
                                                 counter += 1
                                                 unseen_content.append(chunks_xml[index])
-                                    elif any(excluded_section in index for excluded_section in ["Vormedikation", "Therapie"]):
+                                    elif any(excluded_section in index for excluded_section in ["Vormedikation", "Therapie"]): # Catch the 2 of 16 sections for the unseen data
                                          if unseen_bool == False:
                                             unseen_bool = True
                                             counter = 0
                                 if chosen_action == actions[0]:
-                                    negative_cdata_index = cdata_chunks(chunks_xml, chunk_indices)
+                                    negative_cdata_index = cdata_chunks(chunks_xml, chunk_indices) # Get all CDATA that isnt correct
                                     if negative_cdata_index:
                                         cdata_pair += 1
                                     else:
@@ -170,7 +171,7 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
                             f'-----\n'
                             f'Antwort: '
                         )
-                        tokenized = tokenizer(prompt, return_tensors="pt")  # `return_tensors` is optional if you just want token count
+                        tokenized = tokenizer(prompt, return_tensors="pt") # Generate full example so there wont be truncation at runtime
                         num_tokens = len(tokenized.input_ids[0])
                         if num_tokens < 2048:
 
@@ -188,7 +189,6 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
                         else:
                             malformed += 1
                     elif unseen_bool == True and len(unseen_content) == 3:
-                        #for example in content:#zip(positive_examples, negative_examples):
                         context = (
                             f'Kontext 1: "{unseen_content[0]}"\n'
                             f'Kontext 2: "{unseen_content[1]}"\n'
@@ -203,7 +203,7 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
                             f'-----\n'
                             f'Antwort: '
                         )
-                        tokenized = tokenizer(prompt, return_tensors="pt")  # `return_tensors` is optional if you just want token count
+                        tokenized = tokenizer(prompt, return_tensors="pt")
                         num_tokens = len(tokenized.input_ids[0])
                         if num_tokens < 2048:
 
@@ -221,7 +221,6 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
                         else:
                             malformed += 1   
                     elif len(real_content) == 3:
-                        #for example in content:#zip(positive_examples, negative_examples):
                         context = (
                             f'Kontext 1: "{real_content[0]}"\n'
                             f'Kontext 2: "{real_content[1]}"\n'
@@ -236,7 +235,7 @@ with open(output_file_path, 'a', encoding='utf-8') as output_file, \
                             f'-----\n'
                             f'Antwort: '
                         )
-                        tokenized = tokenizer(prompt, return_tensors="pt")  # `return_tensors` is optional if you just want token count
+                        tokenized = tokenizer(prompt, return_tensors="pt")
                         num_tokens = len(tokenized.input_ids[0])
                         if num_tokens < 2048:
 
@@ -263,7 +262,7 @@ print(f"Normal cases: {normal_pair}")
 print(f"Real cases: {total_pairs_written + unseen_pair + real_pair}")
 print(f"Real pairs: {real_pair}")
 print(f"Empty catches {empty_catch}")
-# Generation testing dataset
+# Example output
 # Malformed entries without sufficient details: 112875
 # Malformed entries with insufficient negative chunks: 60
 # Total valid normal pairs written: 287352
@@ -283,8 +282,3 @@ print(f"Empty catches {empty_catch}")
 # Real cases -> dataset of normal pairs, unseen data and prompts requiring above 3 context chunks
 # Malformed entries wo details -> Cdata cases where no negative cdata could be found (do thus not count as cdata case but normal case - is considered in the count)
 # Malformed entries w negative chunks -> Token size >= 2048 -> unused
-
-# Run again and this time include unseen in the normal data
-# also only real cases (longer than 3)
-
-# for embedding training, add more cases with CDATA embedding
