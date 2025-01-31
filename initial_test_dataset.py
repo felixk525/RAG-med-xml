@@ -1,4 +1,27 @@
-# Define a dictionary mapping sections to lists of questions
+import re
+from xml.dom import minidom
+import pandas as pd
+from collections import defaultdict
+import random
+import json
+import html
+
+# Code used to create the initial dataset
+
+# XML data provided by the clinic
+file_path = 'D:/Bachelorarbeit/Arztbriefe_Export_WITH_XML.csv'
+# 100 recommended due to memory limitations
+chunk_size = 100
+chunk_iterator = pd.read_csv(file_path, chunksize=chunk_size)
+failures = 0
+empty = 0
+exclude_sections = True
+# Process 1000 chunks for a total of 100000 files
+num_chunks = 1000  
+chunks_to_skip = 3000 # To skip data used previously for training
+output_file = "D:/Bachelorarbeit/XML_testing_dataset.jsonl" # Saving in a JSONL (JSON Lines) file
+
+# A set dictionary of possible questions for each section
 section_questions = {
     "Diagnosis": [
         "Welche Diagnose wurde beim Patienten gestellt?",
@@ -98,16 +121,9 @@ section_questions = {
     ]
 }
 
-import re
-from xml.dom import minidom
-import pandas as pd
-from collections import defaultdict
-import random
-import json
-import html
-#from lxml import etree
 
-file_path = 'D:/Bachelorarbeit/Arztbriefe_Export_WITH_XML.csv'
+
+
 
 def get_random_questions(section):
     """Get random questions for a section."""
@@ -118,13 +134,6 @@ def get_random_questions(section):
 
 def process_cdata(cdata_text):
     """Process and clean CDATA content."""
-    # Remove unwanted CSS/style blocks
-    #css_pattern = re.compile(r'(BODY|TD|TH|P|DIV|UL|OL|BLOCKQUOTE|BUTTON|INPUT|SELECT|TEXTAREA|FONT|MARGIN|COLOR|BACKGROUND)[^}]*}', re.IGNORECASE)
-    #cleaned_cdata = re.sub(css_pattern, '', cdata_text.strip())
-
-    # Decode HTML entities
-    #decoded_cdata = html.unescape(cleaned_cdata)
-
     # Replace tags with a single space and normalize whitespace
     stripped_content = re.sub(r'<[^>]*>', ' ', cdata_text)  # Replace tags with a space
     stripped_content = re.sub(r'\s+', ' ', stripped_content).strip()  # Normalize excessive whitespace
@@ -138,35 +147,25 @@ def chunking(file, chunk_size = 5):
     file = file.splitlines()
 
     for i, line in enumerate(file):
-        current_chunk.append(line.strip())# Add the current line to the chunk, stripping whitespace
+        current_chunk.append(line.strip())
         if len(current_chunk) == chunk_size or i == len(file) - 1:  # Full chunk or document end
-            combined_chunk = ' '.join(current_chunk)  # Combine the lines into a single string
+            combined_chunk = ' '.join(current_chunk)
             chunk_list.append(combined_chunk)
-            current_chunk = []  # Reset the chunk
+            current_chunk = []
     return chunk_list
-
-# 100 recommended
-chunk_size = 100
-chunk_iterator = pd.read_csv(file_path, chunksize=chunk_size)
-failures = 0
-empty = 0
-exclude_sections = True
-output_file = "D:/Bachelorarbeit/XML_testing_dataset.jsonl" # Saving in a JSONL (JSON Lines) file
 
 # Open the file for writing (if it already exists, it will be overwritten)
 with open(output_file, "w", encoding="utf-8") as f:
     pass
 
-# Process 1000 chunks for a total of 100000 files
-num_chunks = 1000  
-chunks_to_skip = 3000
+
 with open(output_file, "a", encoding="utf-8") as f:
     # Write each entry as a JSON object on a new line
     for a in range(chunks_to_skip):
         try:
             next(chunk_iterator)  # Skip over the chunks you don't want to process
             if ((a + 1) % 200 == 0):
-                print(f"{a+1} chunks skipped")
+                print(f"{a+1} chunks skipped") # Track progress
         except StopIteration:
             print("End of iterator reached before skipping required chunks.")
             break
@@ -221,7 +220,6 @@ with open(output_file, "a", encoding="utf-8") as f:
                                 if node.nodeType == minidom.Node.CDATA_SECTION_NODE:
                                     for chunk_idx, chunk_content in enumerate(chunks_xml):
                                         # Find the chunk that has the CDATA ! Uses embedding chunk length
-                                        #normalized_chunk = chunk.strip().replace('\r\n', '\n').replace('\r', '\n')
                                         if node.data in chunk_content:
                                             chunk_indexes_per_paragraph.append(chunk_idx)
                                             break
@@ -245,7 +243,7 @@ with open(output_file, "a", encoding="utf-8") as f:
                 if qaci_pairs:
                     # Open the JSONL file and append the current chunk's data
                     json.dump({
-                        "xml_data": xml_str, #add optimal embedding chunk (embedded & normal)
+                        "xml_data": xml_str, 
                         "qaci_pairs": qaci_pairs,
                     }, f, ensure_ascii=False)
                     f.write("\n")
@@ -257,4 +255,3 @@ with open(output_file, "a", encoding="utf-8") as f:
 
 print(f"Dataset created and saved to {output_file}")
 print(f"{failures} failures, {empty} empty from {num_chunks * chunk_size} entries")
-# 180 000 training entries
