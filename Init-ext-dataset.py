@@ -6,25 +6,19 @@ import xml.dom.minidom
 import random
 import transformers
 from transformers import AutoTokenizer
-# 1. replace tag name in attribute cases
-# 2. remove closing tags without attributes
-# 3. Capitalize opening tags and add :
-# 4. Remove excessive whitespace
+
+# Dataset for the transformation of XML content to semi fluent content
+
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-1.5B-Instruct")
 file_path = 'D:/Bachelorarbeit/Arztbriefe_Export_WITH_XML.csv'
 chunk_factor = 5000
-# chunk_factor * 50 = parsed entries 25000
+# chunk_factor * 50 = parsed entries
 entry_index = 0 
 failures2 = 0
 failures3 = 0
 written = 0
 output_xml = 'D:/Bachelorarbeit/extract_dataset.jsonl'
 failures = 0
-
-# Processing finished. Failures: 5096
-# Processing finished. Failures2: 0
-# Processing finished. Failures3: 1446
-# Processing finished. Written: 9780
 
 with open(output_xml, 'w', encoding='utf-8') as file:
     pass
@@ -47,7 +41,6 @@ def xml_chunk_to_text(xml_chunk):
         if cdata:
             line = cdata.group(1)
             line = re.sub(r'<.*?>', ' ', line)
-                #line = re.sub(r'<[^<>]*>$', ' ', line)
         elif closing_tag:
             line = ""
         elif self_closing_tag:
@@ -64,7 +57,7 @@ def xml_chunk_to_text(xml_chunk):
                     line = re.sub(rf'\b{attr_name}=["\'].*?["\']', '', line).strip()
                     break
         elif opening_tag:
-            tag = opening_tag.group(1) + ": " # Capitalize
+            tag = opening_tag.group(1) + ": "
             line = opening_tag.group(2).strip()
 
 
@@ -116,7 +109,7 @@ with open(output_xml, 'a', encoding='utf-8') as file:
                 if len(xml_content) !=3:
                         xml_content.append(xml_chunk)
                         extracted_content.append(xml_str)
-                else:
+                else: # Prompt for extraction
                     xml_prompt = (f'Du bist ein Assistent der hilft HTML und XML in fließenden Text umzuformen und die medizinischen Informationen aus dem gegebenen Kontext auszulesen. Gib als Antwort nur die enthaltenen Informationen an, ohne selber Text hinzuzufügen. Frage nicht nach mehr Kontext und gib die relevanten Informationen kurz an.\n'
                                 f'-----\n'
                                 f'Kontext 1: "{xml_content[0]}"\n'
@@ -125,7 +118,7 @@ with open(output_xml, 'a', encoding='utf-8') as file:
                                 f'-----\n'
                                 f'Der extrahierte Kontext ist:'
                     )
-                    tokenized = tokenizer(xml_prompt, return_tensors="pt")  # `return_tensors` is optional if you just want token count
+                    tokenized = tokenizer(xml_prompt, return_tensors="pt")
                     num_tokens = len(tokenized.input_ids[0])
                     if num_tokens < 2048:
                         fluent_prompt = (
@@ -153,62 +146,7 @@ with open(output_xml, 'a', encoding='utf-8') as file:
                     failures += 1
                     continue
 
-#print(xml_chunk_to_text(xml_input))
 print("Processing finished. Exceptions: " + str(failures))
 print("Processing finished. Not enough cdata: " + str(failures2))
 print("Processing finished. Too long: " + str(failures3))
 print("Processing finished. Written: " + str(written))
-def parse_malformed_xml(xml_string):
-    def process_line(line, depth=0):
-        """Processes a single line, transforming it according to the rules."""
-        indent = "  " * depth
-        line = line.strip()
-        
-        # Match opening tags with attributes
-        opening_tag = re.match(r"<(\w+)(.*?)>", line)
-        if opening_tag:
-            tag_name = opening_tag.group(1)
-            attributes = opening_tag.group(2).strip()
-            
-            # Replace attributes
-            attr_string = ""
-            if attributes:
-                attr_string = " ".join(attributes.split())
-            if attr_string:
-                return f"{indent}{tag_name} {attr_string}"
-            return f"{indent}{tag_name}"
-        
-        # Match self-closing tags
-        self_closing_tag = re.match(r"<(\w+)(.*?)/>", line)
-        if self_closing_tag:
-            tag_name = self_closing_tag.group(1)
-            attributes = self_closing_tag.group(2).strip()
-            return f"{indent}{tag_name} {attributes}" if attributes else f"{indent}{tag_name}"
-        
-        # Match closing tags
-        closing_tag = re.match(r"</(\w+)>", line)
-        if closing_tag:
-            return ""  # Ignore closing tags unless specifically required
-        
-        # Match text content
-        if line:
-            return f"{indent}{line}"
-        
-        return ""
-
-    # Process the input line by line
-    lines = xml_string.splitlines()
-    result = []
-    depth = 0
-    for line in lines:
-        transformed_line = process_line(line, depth)
-        if transformed_line:
-            result.append(transformed_line)
-        # Adjust depth based on opening/closing tags (approximation for malformed XML)
-        if "<" in line and not "/>" in line and not "</" in line:
-            depth += 1
-        elif "</" in line:
-            depth = max(depth - 1, 0)
-
-    return "\n".join(result)
-
