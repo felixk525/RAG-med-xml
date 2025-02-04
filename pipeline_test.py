@@ -90,9 +90,6 @@ dataset = dataset.select(range(datasize))
 Correctly_done = 0
 
 
-def tokenize_function(examples):
-    return processor(examples['input_text'], truncation=True, padding='max_length', max_length=2048)
-
 bleu_scores = []
 rouge_scores = []
 skipped = 0
