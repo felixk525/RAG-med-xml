@@ -91,9 +91,6 @@ dataset = load_dataset('json', data_files=dataset_path, split='train' )
 dataset = dataset.select(range(datasize))
 Correctly_done = 0
 
-def tokenize_function(examples):
-    return processor(examples['input_text'], truncation=True, padding='max_length', max_length=2048)
-
 
 bleu_scores = []
 rouge_scores = []
@@ -117,14 +114,6 @@ def read_jsonl_in_chunks(file, chunk_size):
 def chunk_text(text, lines_per_chunk = 5):
     lines = text.splitlines()
     return ["\n".join(lines[i:i + lines_per_chunk]) for i in range (0, len(lines), lines_per_chunk)]
-
-def cdata_chunks(chunks, indices_list):
-    filtered_chunks = [(i, chunk) for i, chunk in enumerate(chunks) if i not in indices_list[1:]]
-    cdata_indices = [original_idx for original_idx, chunk in filtered_chunks if "CDATA" in chunk]
-    if cdata_indices:
-        return cdata_indices
-    else:
-        return None
 
 def evaluate_chunks(question, chunks_xml, model, top_k=3):
     """
