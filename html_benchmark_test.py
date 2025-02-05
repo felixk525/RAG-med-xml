@@ -1,59 +1,41 @@
-
+import datasets
 from datasets import load_dataset, Dataset, DatasetDict
-from transformers import TrainingArguments, Trainer
-from transformers import AutoModel, AutoModelForCausalLM, BitsAndBytesConfig, PreTrainedTokenizerBase
 from peft import PeftModel, LoraConfig, get_peft_model, prepare_model_for_kbit_training
-from transformers import AutoModelForCausalLM, pipeline, GPTQConfig, EarlyStoppingCallback
-from transformers import DataCollatorWithPadding, AutoProcessor, PreTrainedTokenizerFast, set_seed
 from trl import SFTConfig, SFTTrainer
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import transformers
-from evaluate import load
 from tqdm import tqdm
 import evaluate
+from evaluate import load
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 import json
 import nltk
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 import numpy as np
 import random
 import os
-import torch
-import evaluate
-from datasets import load_dataset
 from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    HfArgumentParser,
-    TrainingArguments,
-    pipeline,
-    logging,
-    #update transformers?
+    AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, HfArgumentParser,
+    GPTQConfig, EarlyStoppingCallback, DataCollatorWithPadding, AutoProcessor,
+    PreTrainedTokenizerFast, set_seed, TrainingArguments, pipeline, logging,
+    Trainer, AutoModel, PreTrainedTokenizerBase
 )
 import warnings
-from peft import LoraConfig, PeftModel
-from trl import SFTTrainer
 import re
-import os
-torch.manual_seed(42)
 
-# Ensure reproducibility across devices (CPU and GPU)
+torch.manual_seed(42)
 torch.cuda.manual_seed(42)
-torch.cuda.manual_seed_all(42)  # For multi-GPU
+torch.cuda.manual_seed_all(42) 
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 np.random.seed(42)
 random.seed(42)
 set_seed(42)
-# embedding dimensions, pretrained backbone, pooling strategy, normalization
-# learning rate, batch_size, loss function, margin for ranking, negative sampling strategy, number of epochs, optimizer, scheduler, gradient clipping, dropout rate
 
-
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
+# This file is to evaluate the pipeline on the HTML Benchmark
 
 # Load the embedding model
 embed_model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
@@ -66,7 +48,7 @@ bleu_eval = evaluate.load("bleu")
 rouge_eval = evaluate.load("rouge")
 
 quantized_base = True
-alt_model_path = "F:/VSprograms/models/Qwen/custom_qwen_model_9_basic"#"F:/VSprograms/models/Qwen/Qwen2-1.5B-Instruct-personal4"#"Qwen/Qwen2-7B-Instruct-GPTQ-Int4"#"F:/VSprograms/models/Qwen/Qwen2-1.5B-Instruct-personal4"
+alt_model_path = "F:/VSprograms/models/Qwen/custom_qwen_model_9_basic"
 processor_model_path = "Qwen/Qwen2-1.5B-Instruct"
 dataset_path = "F:/VSprograms/WikiQA_html_data.jsonl"
 
@@ -78,8 +60,6 @@ generation_kwargs = {
     "early_stopping": False,
 }
 
-
-
 device_map="auto"
 
 model = AutoModelForCausalLM.from_pretrained(
@@ -88,8 +68,7 @@ model = AutoModelForCausalLM.from_pretrained(
     device_map=device_map,
 )
 
-model.eval()
-
+model.eval() # Put model into evaluation mode
 
 processor = AutoProcessor.from_pretrained(processor_model_path, trust_remote_code=True)
 
@@ -107,7 +86,6 @@ def get_outputs(model, inputs, max_new_tokens=200):
 
 dataset = load_dataset('json', data_files=dataset_path, split='train' )
 datasize = len(dataset)
-#datasize = 10
 Correctly_done = 0
 
 
@@ -206,12 +184,7 @@ with tqdm(total=evaluate_range, desc="Processing entries", unit="lines") as prog
         for i, chunk in enumerate(context, start=1):
             full_context += f'Kontext {i}: "{chunk}"\n'
 
-        # messages = [{"role": "system",
-        #         "content": "You are an assistant that helps to answer the users question with the provided context. In the case where nothing answers the question you answer correspondingly.\n"},
-        #         {"role": "user",
-        #         "content": "The question is: " + question + "\n The context is: \n " + full_context + "\n The answer is: "}
-        #         ]
-        messages = [{"role": "system", # Unkown why but this prompt works especially well.
+        messages = [{"role": "system", # Unkown why but this prompt works especially well, despite being in german.
             "content": "Du bist ein Assistent der hilft für Fragen relevanten Kontext zu finden um die Frage zu beantworten. Sollte nichts die Frage beantworten antwortest du enstprechend.\n"},
             {"role": "user",
             "content": "Die Frage ist: " + question + "\n Der Kontext ist: \n " + full_context + "\n Die Antwort auf die Frage ist: "}
@@ -238,11 +211,10 @@ with tqdm(total=evaluate_range, desc="Processing entries", unit="lines") as prog
         label_c = label.strip()
 
         if not res_c or not label_c or len(res_c) <= 2 or len(label_c) <= 2:
-            #print(f"Skipping sample {i + 1} due to empty prediction or reference.")
             skipped += 1
             continue
         try:
-            bleu_result = bleu_eval.compute(predictions=[res], references=[label]) # [[label]]
+            bleu_result = bleu_eval.compute(predictions=[res], references=[label])
             bleu_scores.append(bleu_result['bleu'])
 
             # Compute ROUGE score
@@ -252,15 +224,10 @@ with tqdm(total=evaluate_range, desc="Processing entries", unit="lines") as prog
             res_embedding = F.normalize(embed_model.encode(res_c, convert_to_tensor=True), p=2, dim=-1)
             label_embedding = F.normalize(embed_model.encode(label_c, convert_to_tensor=True), p=2, dim=-1)
             similarity = torch.nn.functional.cosine_similarity(res_embedding, label_embedding, dim=-1)
-            # similarity = cosine_similarity(res_embedding.cpu().numpy().reshape(1, -1), 
-            #                                 label_embedding.cpu().numpy().reshape(1, -1))
             similarity_scores.append(similarity.item())
 
             res_embedding = F.normalize(embed_model2.encode(res_c, convert_to_tensor=True), p=2, dim=-1)
             label_embedding = F.normalize(embed_model2.encode(label_c, convert_to_tensor=True), p=2, dim=-1)
-
-            # res_embedding = embed_model2.encode(res_c, convert_to_tensor=True)
-            # label_embedding = embed_model2.encode(label_c, convert_to_tensor=True)
             similarity = torch.nn.functional.cosine_similarity(res_embedding, label_embedding, dim=-1)
             similarity_scores2.append(similarity.item())
         except ZeroDivisionError as e:
