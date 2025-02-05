@@ -35,6 +35,7 @@ np.random.seed(42)
 random.seed(42)
 set_seed(42)
 
+# This file is used to get the answer and optimal answer (and the original question) of one data entry as example
 entry_x = 10 # The dataentry used for a single RAG example
 
 # Load the embedding model
