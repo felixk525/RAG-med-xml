@@ -35,6 +35,8 @@ np.random.seed(42)
 random.seed(42)
 set_seed(42)
 
+# This file is for the actual usage of the RAG system. Simply use a xml path and ask the question. (Needs paths for embedding and generation model as well as the xml file)
+
 path = "output_file.xml" # The path for the xml file to use for the RAG pipeline
 top_k = 3
 
