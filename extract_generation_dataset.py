@@ -197,11 +197,11 @@ with open(output_file, 'a', encoding='utf-8') as output_file, \
                         prompt = (
                             f'Du bist ein Assistent der hilft medizinische Informationen die relevant für die Fragen des nutzers sind aus dem gegebenen Kontext auszulesen. Gib nur die relevanten Informationen an, ohne selber die Frage zu beantworten. Frage nicht nach mehr Kontext und gib die relevanten Informationen kurz an, ohne diese zu verändern und nur falls absolut nichts findbar ist meldest du es.\n'
                             f'-----\n'
-                            f'Anfrage: {question}\n'
+                            f'Der Kontext ist: {question}\n'
                             f'-----\n'
                             f'{context}'
                             f'-----\n'
-                            f'Antwort: '
+                            f'Der extrahierte Kontext ist: '
                         )
                         tokenized = tokenizer(prompt, return_tensors="pt") # Tokenize full prompt so it wont get truncated during training
                         num_tokens = len(tokenized.input_ids[0])
